@@ -3,8 +3,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from neo4j import GraphDatabase
+# tag::import_embedder[]
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
+# end::import_embedder[]
+# tag::import_retriever[]
 from neo4j_graphrag.retrievers import VectorCypherRetriever
+# end::import_retriever[]
 from langchain.chat_models import init_chat_model
 from langchain.agents import create_agent
 from langchain_core.tools import tool
@@ -21,54 +25,39 @@ driver = GraphDatabase.driver(
     )
 )
 
+# tag::embedder[]
 # Create embedder
 embedder = OpenAIEmbeddings(model="text-embedding-ada-002")
+# end::embedder[]
 
-# Define retrieval query
-# tag::simple_retrieval_query[]
-retrieval_query = """
-RETURN node.text as text, score
-"""
-# end::simple_retrieval_query[]
 # tag::retrieval_query[]
+# Define retrieval query
 retrieval_query = """
 MATCH (node)-[:FROM_DOCUMENT]->(d)-[:PDF_OF]->(lesson)
 RETURN
     node.text as text, score,
-    lesson.url,
+    lesson.url as lesson_url,
     collect { 
         MATCH (node)<-[:FROM_CHUNK]-(entity)-[r]->(other)-[:FROM_CHUNK]->()
-        RETURN apoc.text.join(
-            [labels(entity)[2], entity.name, type(r), labels(other)[2], other.name], " "
-            )
-        } as associated_entities
-"""
-
-retrieval_query = """
-MATCH (node)-[:FROM_DOCUMENT]->(d)-[:PDF_OF]->(lesson)
-
-CALL (node) {
-  MATCH (node)<-[:FROM_CHUNK]-(entity)-[r]->(other)-[:FROM_CHUNK]->()
-  WITH toStringList(
-    [labels(entity)[2], entity.name, entity.type, entity.description, type(r), labels(other)[2], other.name, other.type, other.description]
-  ) as values
-  RETURN reduce(acc = "", item in values | acc || coalesce(item || ' ', '')) as associated_entities
-} 
-
-RETURN
-    node.text as text, score,
-    lesson.url,
-    associated_entities
+        WITH toStringList([
+            labels(entity)[2], 
+            entity.name, 
+            entity.type, 
+            entity.description, 
+            type(r), 
+            labels(other)[2], 
+            other.name, 
+            other.type, 
+            other.description
+            ]) as values
+        RETURN reduce(acc = "", item in values | acc || coalesce(item || ' ', ''))
+    } as associated_entities
 """
 # end::retrieval_query[]
-# retrieval_query = """
-# RETURN node.text as text, score
-# """
-
 
 # Create retriever
 # tag::retriever[]
-retriever = VectorCypherRetriever(
+vector_retriever = VectorCypherRetriever(
     driver,
     neo4j_database=os.getenv("NEO4J_DATABASE"),
     index_name="chunkEmbedding",
@@ -88,13 +77,13 @@ def get_schema():
     )
     return results
 
-# Define a tool to retrieve financial documents
+# Define a tool to retrieve lesson content
 # tag::search_lessons[]
-@tool("search-lesson-content")
+@tool("Search-lesson-content")
 def search_lessons(query: str):
     """Search for lesson content related to the query."""
-    # Use the vector to find relevant documents
-    result = retriever.search(
+    # Use the vector to find relevant chunks
+    result = vector_retriever.search(
         query_text=query, 
         top_k=5
     )
@@ -115,13 +104,9 @@ agent = create_agent(
 )
 
 # Run the application
-query = "Summarize what benefits are associated with Knowledge Graphs?"
-query = "How are Knowledge Graphs associated with other technologies?"
-query = "What examples are related to minizing hallucinations in LLMs?"
+# tag::query[]
 query = "What are the benefits of using GraphRAG"
-
-
-
+# end::query[]
 
 for step in agent.stream(
     {
@@ -132,8 +117,11 @@ for step in agent.stream(
     step["messages"][-1].pretty_print()
 
 
-
+# tag::example_queries[]
 """
-Summarize what benefits are associated with Knowledge Graphs?
-
+"What are the benefits of using GraphRAG"
+"How are Knowledge Graphs associated with other technologies?"
+"Summarize what concepts are associated with Knowledge Graphs?"
+"How would you minimize hallucinations in LLMs?"
 """
+# end::example_queries[]
