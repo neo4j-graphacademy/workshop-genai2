@@ -85,7 +85,7 @@ kg_builder = SimpleKGPipeline(
 )
 
 # tag::load_csv[]
-data_path = "./genai-graphrag-python/data/"
+data_path = "./workshop-genai/data/"
 
 docs_csv = csv.DictReader(
     open(os.path.join(data_path, "docs.csv"), encoding="utf8", newline='')

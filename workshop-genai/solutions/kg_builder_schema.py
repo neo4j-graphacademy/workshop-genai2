@@ -113,7 +113,7 @@ kg_builder = SimpleKGPipeline(
 # end::kg_builder[]
 
 # tag::all_documents[]
-data_path = "./genai-graphrag-python/data/"
+data_path = "./workshop-genai/data/"
 pdf_files = [os.path.join(data_path, f) for f in os.listdir(data_path) if f.endswith('.pdf')]
 
 for pdf_file in pdf_files:

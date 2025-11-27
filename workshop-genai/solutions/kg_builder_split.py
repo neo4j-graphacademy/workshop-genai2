@@ -45,6 +45,6 @@ kg_builder = SimpleKGPipeline(
 )
 # end::kg_builder[]
 
-pdf_file = "./genai-graphrag-python/data/genai-fundamentals_1-generative-ai_1-what-is-genai.pdf"
+pdf_file = "./workshop-genai/data/genai-fundamentals_1-generative-ai_1-what-is-genai.pdf"
 result = asyncio.run(kg_builder.run_async(file_path=pdf_file))
 print(result.result)

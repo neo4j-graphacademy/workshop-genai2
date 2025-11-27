@@ -6,7 +6,8 @@
 		"codespaces": {
 			"openFiles": [
 				".env.example",
-				"test_environment.py"
+				"test_environment.py",
+				".devcontainer/README.md"
 				]
 		},
 		"vscode": {
